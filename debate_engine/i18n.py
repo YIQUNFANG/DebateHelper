@@ -47,7 +47,9 @@ STRINGS: dict[str, dict] = {
         "section_tactics": "[bold yellow]◆ 战术摘要[/]",
         "section_traps": "[dim red]◆ 需要避开的陷阱[/]",
         # Session
-        "prompt_again": "[bold]继续分析下一条消息？[/]",
+        "prompt_again": "[bold]下一步？[/]",
+        "prompt_again_choices": "y=继续(保留历史), n=退出, r=新对话(清空历史)",
+        "history_cleared": "[bold green]历史已清空，开始新对话。[/]",
         "session_end": "[dim]会话结束，历史文件已清理。[/]",
         "error_prefix": "[bold red]错误：[/] ",
         "api_key_prompt": "[bold]API Key[/]",
@@ -99,7 +101,9 @@ STRINGS: dict[str, dict] = {
         "section_tactics": "[bold yellow]◆ Tactical Summary[/]",
         "section_traps": "[dim red]◆ Traps to Avoid[/]",
         # Session
-        "prompt_again": "[bold]Continue analyzing another message?[/]",
+        "prompt_again": "[bold]Next?[/]",
+        "prompt_again_choices": "y=continue(keep history), n=quit, r=new session(clear history)",
+        "history_cleared": "[bold green]History cleared. Starting new session.[/]",
         "session_end": "[dim]Session ended. History file cleaned up.[/]",
         "error_prefix": "[bold red]Error:[/] ",
         "api_key_prompt": "[bold]API Key[/]",

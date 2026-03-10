@@ -1,0 +1,1148 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DebateHelper — Live</title>
+<style>
+  :root {
+    --bg-primary: #0f0f1a;
+    --bg-secondary: #1a1a2e;
+    --bg-card: #16213e;
+    --text-primary: #e0e0e0;
+    --text-dim: #888;
+    --border: #333;
+    --cyan: #00d4ff;
+    --magenta: #ff00ff;
+    --green: #00ff88;
+    --yellow: #ffdd57;
+    --blue: #5dade2;
+    --red: #ff4757;
+    --dim-red: #cc6666;
+    --accent: #7c3aed;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  .container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem;
+  }
+
+  /* Banner */
+  .banner {
+    font-family: 'Courier New', monospace;
+    font-size: clamp(0.35rem, 1.2vw, 0.75rem);
+    line-height: 1.15;
+    text-align: center;
+    margin-bottom: 0.5rem;
+    white-space: pre;
+    overflow-x: auto;
+  }
+  .banner .line-debate { color: var(--cyan); }
+  .banner .line-debate span { color: var(--magenta); }
+  .banner .line-helper { color: var(--green); }
+  .banner .line-helper span { color: var(--yellow); }
+
+  .subtitle {
+    text-align: center;
+    color: var(--text-dim);
+    margin-bottom: 2rem;
+    font-size: 0.95rem;
+  }
+
+  /* Language toggle */
+  .lang-toggle {
+    position: fixed;
+    top: 1rem;
+    right: 1.5rem;
+    display: flex;
+    gap: 0;
+    z-index: 100;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .lang-toggle button {
+    background: var(--bg-secondary);
+    color: var(--text-dim);
+    border: none;
+    padding: 0.35rem 0.75rem;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: all 0.2s;
+  }
+  .lang-toggle button.active {
+    background: var(--accent);
+    color: #fff;
+  }
+  .lang-toggle button:hover:not(.active) {
+    background: #252540;
+  }
+
+  /* Form */
+  .form-section {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  .form-section label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 0.4rem;
+    font-size: 0.9rem;
+  }
+  .label-context { color: var(--magenta); }
+  .label-message { color: var(--red); }
+  .label-goal { color: var(--text-primary); }
+
+  textarea {
+    width: 100%;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.75rem;
+    font-size: 0.9rem;
+    font-family: inherit;
+    resize: vertical;
+    margin-bottom: 1rem;
+    min-height: 80px;
+  }
+  textarea:focus { outline: none; border-color: var(--accent); }
+
+  .goal-options {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1.2rem;
+    flex-wrap: wrap;
+  }
+  .goal-option {
+    flex: 1;
+    min-width: 140px;
+  }
+  .goal-option input[type="radio"] { display: none; }
+  .goal-option label {
+    display: block;
+    padding: 0.6rem 1rem;
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.2s;
+    font-weight: 600;
+  }
+  .goal-option label:hover { border-color: #555; }
+  .goal-debate input:checked ~ label { border-color: var(--cyan); color: var(--cyan); background: rgba(0,212,255,0.08); }
+  .goal-deescalate input:checked ~ label { border-color: var(--yellow); color: var(--yellow); background: rgba(255,221,87,0.08); }
+  .goal-burn input:checked ~ label { border-color: var(--red); color: var(--red); background: rgba(255,71,87,0.08); }
+
+  .btn-row { display: flex; gap: 0.75rem; }
+  .btn {
+    padding: 0.65rem 1.8rem;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn-analyze {
+    background: var(--accent);
+    color: #fff;
+    flex: 1;
+  }
+  .btn-analyze:hover { background: #6d28d9; }
+  .btn-analyze:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-reset {
+    background: transparent;
+    color: var(--text-dim);
+    border: 1px solid var(--border);
+  }
+  .btn-reset:hover { border-color: #555; color: var(--text-primary); }
+  .btn-new-session {
+    background: transparent;
+    color: var(--yellow);
+    border: 1px solid var(--yellow);
+  }
+  .btn-new-session:hover { background: rgba(255,221,87,0.1); }
+
+  /* History summary */
+  .history-bar {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.6rem 1rem;
+    margin-bottom: 1rem;
+    display: none;
+    font-size: 0.85rem;
+    color: var(--text-dim);
+  }
+  .history-bar.active { display: flex; justify-content: space-between; align-items: center; }
+  .history-bar .history-text { flex: 1; }
+  .history-bar .history-count { color: var(--cyan); font-weight: 600; }
+
+  /* API config bar */
+  .api-config {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1rem 1.2rem;
+    margin-bottom: 1rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    align-items: flex-end;
+  }
+  .api-config .field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+  .api-config .field-url { flex: 2; min-width: 200px; }
+  .api-config .field-key { flex: 2; min-width: 160px; }
+  .api-config .field-model { flex: 1; min-width: 120px; }
+  .api-config label {
+    color: var(--green);
+    font-weight: 600;
+    font-size: 0.8rem;
+    white-space: nowrap;
+  }
+  .api-config input {
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.45rem 0.6rem;
+    font-size: 0.85rem;
+    font-family: monospace;
+  }
+  .api-config input:focus { outline: none; border-color: var(--accent); }
+  .api-config .btn-clear {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    padding: 0.45rem 0.6rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    white-space: nowrap;
+    align-self: flex-end;
+  }
+  .api-config .btn-clear:hover { border-color: #555; color: var(--text-primary); }
+
+  /* Processing animation */
+  .processing {
+    margin-bottom: 1.5rem;
+    display: none;
+  }
+  .processing.active { display: block; }
+  .phase {
+    padding: 0.5rem 0;
+    font-size: 0.9rem;
+    opacity: 0.3;
+    transition: opacity 0.3s;
+  }
+  .phase.active { opacity: 1; }
+  .phase.done { opacity: 0.6; }
+  .phase .spinner {
+    display: inline-block;
+    width: 1em;
+    animation: spin 1s linear infinite;
+  }
+  .phase.done .spinner { display: none; }
+  .phase.done::before { content: '✓ '; color: var(--green); }
+  .phase-1 { color: var(--cyan); }
+  .phase-2 { color: var(--yellow); }
+  .phase-3 { color: var(--green); }
+
+  @keyframes spin {
+    0% { content: '⠋'; }
+    100% { transform: rotate(360deg); }
+  }
+
+  /* Results */
+  .results { display: none; }
+  .results.active { display: block; }
+
+  /* Input summary table */
+  .input-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 1.5rem;
+    font-size: 0.9rem;
+  }
+  .input-table caption {
+    text-align: left;
+    font-weight: 700;
+    padding: 0.5rem 0;
+    color: var(--text-primary);
+  }
+  .input-table th, .input-table td {
+    border: 1px solid var(--border);
+    padding: 0.6rem 0.8rem;
+    text-align: left;
+  }
+  .input-table th {
+    background: var(--bg-secondary);
+    width: 120px;
+    color: var(--text-dim);
+    font-weight: 600;
+  }
+  .input-table td {
+    background: var(--bg-primary);
+  }
+
+  /* Analysis report panel */
+  .report-panel {
+    border: 1px solid #ccc;
+    border-radius: 10px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    background: var(--bg-secondary);
+  }
+  .report-panel h2 {
+    text-align: center;
+    margin-bottom: 1.2rem;
+    font-size: 1.1rem;
+  }
+
+  .section-header {
+    font-weight: 700;
+    font-size: 1rem;
+    margin: 1.2rem 0 0.6rem;
+    padding-bottom: 0.3rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .section-header:first-of-type { margin-top: 0; }
+  .h-psych { color: var(--cyan); }
+  .h-logic { color: var(--blue); }
+  .h-tactics { color: var(--yellow); }
+  .h-traps { color: var(--dim-red); }
+
+  .detail-label {
+    color: var(--text-dim);
+    font-weight: 600;
+    margin-top: 0.5rem;
+  }
+  .detail-value {
+    margin-bottom: 0.6rem;
+    padding-left: 0.5rem;
+    font-size: 0.9rem;
+  }
+
+  .fallacy-item {
+    background: var(--bg-primary);
+    border-left: 3px solid var(--blue);
+    padding: 0.6rem 0.8rem;
+    margin-bottom: 0.5rem;
+    border-radius: 0 6px 6px 0;
+    font-size: 0.88rem;
+  }
+  .fallacy-name { font-weight: 700; color: var(--blue); }
+  .fallacy-quote { color: var(--yellow); font-style: italic; }
+
+  .trap-item {
+    background: rgba(204,102,102,0.08);
+    border-left: 3px solid var(--dim-red);
+    padding: 0.5rem 0.8rem;
+    margin-bottom: 0.4rem;
+    border-radius: 0 6px 6px 0;
+    font-size: 0.88rem;
+  }
+
+  /* Response panels */
+  .response-panel {
+    border: 2px solid;
+    border-radius: 10px;
+    padding: 1.5rem;
+    margin-bottom: 1.2rem;
+    background: var(--bg-secondary);
+  }
+  .response-panel h3 {
+    margin-bottom: 0.3rem;
+    font-size: 1.05rem;
+  }
+  .response-desc {
+    color: var(--text-dim);
+    font-size: 0.85rem;
+    margin-bottom: 0.8rem;
+  }
+  .response-text {
+    font-size: 0.92rem;
+    line-height: 1.7;
+    white-space: pre-wrap;
+  }
+
+  .response-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.3rem;
+  }
+  .response-header h3 { margin-bottom: 0; }
+  .btn-copy {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    padding: 0.3rem 0.7rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+  .btn-copy:hover { border-color: #555; color: var(--text-primary); }
+  .btn-copy.copied {
+    border-color: var(--green);
+    color: var(--green);
+  }
+
+  .panel-surgeon { border-color: var(--green); }
+  .panel-surgeon h3 { color: var(--green); }
+  .panel-tank { border-color: var(--blue); }
+  .panel-tank h3 { color: var(--blue); }
+  .panel-nuclear { border-color: var(--red); }
+  .panel-nuclear h3 { color: var(--red); }
+
+  /* Error notice */
+  .error-notice {
+    background: rgba(255,71,87,0.1);
+    border: 1px solid var(--red);
+    border-radius: 8px;
+    padding: 0.8rem 1rem;
+    margin-bottom: 1rem;
+    color: var(--red);
+    font-size: 0.9rem;
+    display: none;
+    white-space: pre-wrap;
+  }
+  .error-notice.active { display: block; }
+  .error-notice .btn-retry {
+    background: var(--red);
+    color: #fff;
+    border: none;
+    padding: 0.3rem 0.8rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    margin-top: 0.5rem;
+  }
+
+  /* Responsive */
+  @media (max-width: 600px) {
+    .container { padding: 1rem; }
+    .banner { font-size: 0.3rem; }
+    .goal-options { flex-direction: column; }
+    .api-config { flex-direction: column; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Language toggle -->
+<div class="lang-toggle">
+  <button id="btn-zh" class="active" onclick="setLang('zh')">中文</button>
+  <button id="btn-en" onclick="setLang('en')">EN</button>
+</div>
+
+<div class="container">
+
+  <!-- Banner -->
+  <div class="banner" aria-label="DebateHelper ASCII banner"><div class="line-debate">██████╗ ███████╗██████╗   █████╗ ████████╗███████╗
+██╔══██╗██╔════╝██╔══██╗<span>██╔══██╗╚══██╔══╝██╔════╝</span>
+██║  ██║█████╗  ██████╔╝<span>███████║   ██║   █████╗  </span>
+██║  ██║██╔══╝  ██╔══██╗<span>██╔══██║   ██║   ██╔══╝  </span>
+██████╔╝███████╗██████╔╝<span>██║  ██║   ██║   ███████╗</span>
+╚═════╝ ╚══════╝╚═════╝ <span>╚═╝  ╚═╝   ╚═╝   ╚══════╝</span></div><div class="line-helper">██╗  ██╗███████╗██╗     <span>██████╗ ███████╗██████╗ </span>
+██║  ██║██╔════╝██║     <span>██╔══██╗██╔════╝██╔══██╗</span>
+███████║█████╗  ██║     <span>██████╔╝█████╗  ██████╔╝</span>
+██╔══██║██╔══╝  ██║     <span>██╔═══╝ ██╔══╝  ██╔══██╗</span>
+██║  ██║███████╗███████╗<span>██║     ███████╗██║  ██║</span>
+╚═╝  ╚═╝╚══════╝╚══════╝<span>╚═╝     ╚══════╝╚═╝  ╚═╝</span></div></div>
+
+  <div class="subtitle" id="subtitle"></div>
+
+  <!-- History bar -->
+  <div class="history-bar" id="history-bar">
+    <span class="history-text" id="history-text"></span>
+    <button class="btn btn-new-session" id="btn-new-session" onclick="newSession()"></button>
+  </div>
+
+  <!-- API config -->
+  <div class="api-config" id="api-config">
+    <div class="field field-url">
+      <label id="lbl-base-url">Base URL</label>
+      <input type="text" id="input-base-url" placeholder="https://api.openai.com/v1">
+    </div>
+    <div class="field field-key">
+      <label id="lbl-api-key">API Key</label>
+      <input type="password" id="input-api-key" placeholder="sk-...">
+    </div>
+    <div class="field field-model">
+      <label id="lbl-model">Model</label>
+      <input type="text" id="input-model" placeholder="gpt-4o">
+    </div>
+    <button class="btn-clear" id="btn-clear" onclick="clearConfig()">Clear</button>
+  </div>
+
+  <!-- Error notice -->
+  <div class="error-notice" id="error-notice">
+    <div id="error-text"></div>
+    <button class="btn-retry" id="btn-retry" onclick="analyze()"></button>
+  </div>
+
+  <!-- Input form -->
+  <div class="form-section" id="form-section">
+    <label class="label-context" id="lbl-context"></label>
+    <textarea id="input-context" rows="3"></textarea>
+
+    <label class="label-message" id="lbl-message"></label>
+    <textarea id="input-message" rows="3"></textarea>
+
+    <label class="label-goal" id="lbl-goal"></label>
+    <div class="goal-options">
+      <div class="goal-option goal-debate">
+        <input type="radio" name="goal" id="goal-debate" value="debate" checked>
+        <label for="goal-debate" id="lbl-goal-debate"></label>
+      </div>
+      <div class="goal-option goal-deescalate">
+        <input type="radio" name="goal" id="goal-deescalate" value="deescalate">
+        <label for="goal-deescalate" id="lbl-goal-deescalate"></label>
+      </div>
+      <div class="goal-option goal-burn">
+        <input type="radio" name="goal" id="goal-burn" value="burn">
+        <label for="goal-burn" id="lbl-goal-burn"></label>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-analyze" id="btn-analyze" onclick="analyze()"></button>
+      <button class="btn btn-reset" id="btn-reset" onclick="resetForm()"></button>
+    </div>
+  </div>
+
+  <!-- Processing animation -->
+  <div class="processing" id="processing">
+    <div class="phase phase-1" id="phase-1"><span class="spinner">⠋</span> <span class="phase-text"></span></div>
+    <div class="phase phase-2" id="phase-2"><span class="spinner">⠋</span> <span class="phase-text"></span></div>
+    <div class="phase phase-3" id="phase-3"><span class="spinner">⠋</span> <span class="phase-text"></span></div>
+  </div>
+
+  <!-- Results -->
+  <div class="results" id="results">
+    <table class="input-table" id="input-table">
+      <caption id="table-caption"></caption>
+      <tbody id="table-body"></tbody>
+    </table>
+
+    <div class="report-panel">
+      <h2 id="report-title"></h2>
+      <div id="report-content"></div>
+    </div>
+
+    <div id="response-panels"></div>
+  </div>
+
+</div>
+
+<script>
+// ── i18n ────────────────────────────────────────────────────────────────────
+const I18N = {
+  zh: {
+    subtitle: "多智能体论证分析 — 实时 LLM 模式",
+    lbl_context: "背景（什么情况？）",
+    lbl_message: "对方消息（对方说了什么？）",
+    lbl_goal: "选择你的目标：",
+    goal_debate: "辩论",
+    goal_deescalate: "降级",
+    goal_burn: "焚烧",
+    btn_analyze: "分析",
+    btn_reset: "重置",
+    phase_1: "阶段一：分析师 + 逻辑师 并行运行中...",
+    phase_2: "阶段二：战术师 合成作战计划中...",
+    phase_3: "阶段三：文案师 生成三级回复中...",
+    table_caption: "输入场景",
+    th_context: "背景",
+    th_message: "对方消息",
+    th_goal: "目标",
+    report_title: "综合分析报告",
+    section_psych: "◆ 心理分析摘要",
+    label_motive: "动机：",
+    label_trigger: "触发点：",
+    label_insecurity: "不安全感：",
+    label_style: "沟通风格：",
+    section_logic: "◆ 逻辑分析摘要",
+    label_fallacy: "谬误",
+    label_arg_structure: "论证结构：",
+    section_tactics: "◆ 战术摘要",
+    section_traps: "◆ 需要避开的陷阱",
+    tier_surgeon: "外科手术（精准打击）",
+    tier_tank: "坦克碾压（逻辑粉碎）",
+    tier_nuclear: "核弹打击（痛点直击）",
+    btn_copy: "复制",
+    btn_copied: "已复制 ✓",
+    btn_new_session: "新对话",
+    history_info: "已加载 {n} 轮历史上下文",
+    round_label: "第 {n} 轮",
+    lbl_base_url: "Base URL",
+    lbl_api_key: "API Key",
+    lbl_model: "模型",
+    btn_clear: "清除配置",
+    btn_retry: "重试",
+    err_no_config: "请填写 Base URL、API Key 和 Model",
+    err_parse: "JSON 解析失败，显示原始输出：\n",
+    err_network: "网络或认证错误：\n",
+  },
+  en: {
+    subtitle: "Multi-agent argument analysis — Live LLM mode",
+    lbl_context: "Context (What's the situation?)",
+    lbl_message: "Opponent's Message (What did they say?)",
+    lbl_goal: "Choose your goal:",
+    goal_debate: "Debate",
+    goal_deescalate: "De-escalate",
+    goal_burn: "Burn",
+    btn_analyze: "Analyze",
+    btn_reset: "Reset",
+    phase_1: "Phase 1: Analyst + Logician running in parallel...",
+    phase_2: "Phase 2: Tactician synthesizing battle plan...",
+    phase_3: "Phase 3: Copywriter generating 3-tier responses...",
+    table_caption: "Input Scenario",
+    th_context: "Context",
+    th_message: "Opponent Msg",
+    th_goal: "Goal",
+    report_title: "Comprehensive Analysis Report",
+    section_psych: "◆ Psychological Analysis",
+    label_motive: "Motive: ",
+    label_trigger: "Trigger: ",
+    label_insecurity: "Insecurity: ",
+    label_style: "Comm. Style: ",
+    section_logic: "◆ Logic Analysis",
+    label_fallacy: "Fallacy",
+    label_arg_structure: "Argument Structure: ",
+    section_tactics: "◆ Tactical Summary",
+    section_traps: "◆ Traps to Avoid",
+    tier_surgeon: "Surgeon (Precision Strike)",
+    tier_tank: "Tank (Logic Crush)",
+    tier_nuclear: "Nuclear (Pain-Point Strike)",
+    btn_copy: "Copy",
+    btn_copied: "Copied ✓",
+    btn_new_session: "New Session",
+    history_info: "{n} round(s) of history loaded",
+    round_label: "Round {n}",
+    lbl_base_url: "Base URL",
+    lbl_api_key: "API Key",
+    lbl_model: "Model",
+    btn_clear: "Clear Config",
+    btn_retry: "Retry",
+    err_no_config: "Please fill in Base URL, API Key, and Model",
+    err_parse: "JSON parse failed. Raw output:\n",
+    err_network: "Network or auth error:\n",
+  }
+};
+
+// ── System Prompts (identical to Python agents) ─────────────────────────────
+const SYSTEM_PROMPTS = {
+  analyst: `You are The Analyst, an expert in social psychology, attribution theory, and narcissistic injury detection. Your job is to decode the psychological motives behind an opponent's message in a conflict or debate.
+
+Given the context of a conversation and the opponent's message, produce a JSON analysis with exactly these keys:
+
+{
+  "motive_analysis": "A concise explanation of WHY the person said what they said, referencing attribution theory (internal vs external attributions, fundamental attribution error, self-serving bias).",
+  "emotional_trigger": "The specific emotion driving the message (e.g., fear of losing status, wounded pride, anxiety about being exposed, desire for control).",
+  "underlying_insecurity": "The deeper insecurity or vulnerability the message reveals — what they are protecting or compensating for.",
+  "communication_style": "Classify their style: aggressive, passive-aggressive, dismissive, deflecting, grandiose, or victim-posturing.",
+  "leverage_points": ["List of 2-3 psychological pressure points that could be ethically used in a response."]
+}
+
+Rules:
+- Be precise, not speculative. Ground analysis in observable language cues.
+- Output ONLY valid JSON — no markdown fences, no commentary.`,
+
+  logician: `You are The Logician, an expert in formal logic, informal fallacies, and argumentation theory. Your job is to structurally dismantle an opponent's argument by identifying every logical flaw.
+
+Given the context and the opponent's message, produce a JSON analysis with exactly these keys:
+
+{
+  "fallacies": [
+    {
+      "name": "Name of the fallacy (e.g., Strawman, Ad Hominem, Red Herring, False Dilemma, Appeal to Authority, Slippery Slope, Tu Quoque, etc.)",
+      "quote": "The exact phrase or segment from the opponent's message that commits this fallacy.",
+      "explanation": "Why this constitutes the named fallacy — reference the logical structure."
+    }
+  ],
+  "invalid_premises": [
+    {
+      "premise": "State the implicit or explicit premise.",
+      "why_invalid": "Explain why this premise is unsupported, false, or misleading."
+    }
+  ],
+  "argument_structure": "Describe the overall argument structure: is it deductive, inductive, abductive, or purely rhetorical? Is the conclusion supported?",
+  "strongest_counterpoints": ["List 2-3 concise, devastating counterpoints that directly refute the core argument."]
+}
+
+Rules:
+- Only flag genuine fallacies — do not over-detect.
+- If the argument is actually sound, say so honestly.
+- Output ONLY valid JSON — no markdown fences, no commentary.`,
+
+  tactician: `You are The Tactician, a master strategist who synthesizes psychological intelligence and logical analysis into an actionable debate strategy.
+
+You receive two reports:
+1. The Analyst's psychological profile (motives, triggers, insecurities).
+2. The Logician's structural analysis (fallacies, invalid premises, counterpoints).
+
+Your job is to produce a unified "Battle Plan" — a strategic guide that links each of the opponent's logical fallacies to their psychological vulnerabilities, creating maximally effective response strategies.
+
+Produce a JSON object with exactly these keys:
+
+{
+  "strategic_summary": "A 2-3 sentence overview of the recommended approach.",
+  "attack_vectors": [
+    {
+      "fallacy_exploited": "Name of the fallacy to target.",
+      "psychological_link": "How this fallacy connects to their insecurity or emotional trigger.",
+      "recommended_move": "The specific rhetorical or logical move to make.",
+      "expected_reaction": "How the opponent is likely to respond."
+    }
+  ],
+  "tone_guidance": {
+    "surgeon": "Tone and approach notes for a precise, de-escalating response.",
+    "tank": "Tone and approach notes for a logic-heavy domination response.",
+    "nuclear": "Tone and approach notes for a psychological pressure response."
+  },
+  "traps_to_avoid": ["List of 2-3 counter-moves the opponent might attempt that you should not fall for."]
+}
+
+Rules:
+- Be strategic, not cruel. The goal is effectiveness, not gratuitous harm.
+- Adapt strategy to the user's stated goal (Debate / De-escalate / Burn).
+- Output ONLY valid JSON — no markdown fences, no commentary.`,
+
+  copywriter: `You are The Copywriter, an expert in persuasive communication, conflict rhetoric, and emotional intelligence. You generate three distinct response options at different intensity levels.
+
+You receive:
+1. The original context and opponent's message.
+2. The Tactician's Battle Plan (strategic guide).
+
+Produce a JSON object with exactly these keys:
+
+{
+  "tier_1_surgeon": {
+    "label": "The Surgeon (Precision)",
+    "description": "High emotional intelligence. De-escalation or subtle boundary setting. Maintains moral high ground while making the opponent feel heard — then redirecting.",
+    "response": "The actual human-like response text. Write in first person. Sound natural, not robotic. 3-6 sentences."
+  },
+  "tier_2_tank": {
+    "label": "The Tank (Logic Crush)",
+    "description": "High-density logical refutation. Directly unmasks fallacies and forces the opponent to confront their reasoning errors. Firm but not personal.",
+    "response": "The actual human-like response text. Write in first person. Sound natural, not robotic. 4-8 sentences."
+  },
+  "tier_3_nuclear": {
+    "label": "The Nuclear (Pain-Point Strike)",
+    "description": "Direct hit on the psychological insecurity identified in analysis. Uses the opponent's own words and patterns against them. Use with caution — this is the high-damage option.",
+    "response": "The actual human-like response text. Write in first person. Sound natural, not robotic. 3-6 sentences."
+  }
+}
+
+Rules:
+- Each response MUST sound like a real human wrote it — no corporate speak, no therapy speak, no AI cliches.
+- Adapt intensity to the user's goal (Debate / De-escalate / Burn).
+- The Nuclear tier should be sharp but not gratuitously cruel.
+- Output ONLY valid JSON — no markdown fences, no commentary.`
+};
+
+// ── State ────────────────────────────────────────────────────────────────────
+let currentLang = 'zh';
+let roundNum = 0;
+let roundHistory = [];
+let lastResult = null;
+
+function t(key) { return I18N[currentLang][key] || key; }
+
+// ── Language ────────────────────────────────────────────────────────────────
+function setLang(lang) {
+  currentLang = lang;
+  document.getElementById('btn-zh').classList.toggle('active', lang === 'zh');
+  document.getElementById('btn-en').classList.toggle('active', lang === 'en');
+  document.documentElement.lang = lang;
+  applyI18n();
+}
+
+function applyI18n() {
+  document.getElementById('subtitle').textContent = t('subtitle');
+  document.getElementById('lbl-context').textContent = t('lbl_context');
+  document.getElementById('lbl-message').textContent = t('lbl_message');
+  document.getElementById('lbl-goal').textContent = t('lbl_goal');
+  document.getElementById('lbl-goal-debate').textContent = t('goal_debate');
+  document.getElementById('lbl-goal-deescalate').textContent = t('goal_deescalate');
+  document.getElementById('lbl-goal-burn').textContent = t('goal_burn');
+  document.getElementById('btn-analyze').textContent = t('btn_analyze');
+  document.getElementById('btn-reset').textContent = t('btn_reset');
+  document.getElementById('btn-new-session').textContent = t('btn_new_session');
+  document.getElementById('lbl-base-url').textContent = t('lbl_base_url');
+  document.getElementById('lbl-api-key').textContent = t('lbl_api_key');
+  document.getElementById('lbl-model').textContent = t('lbl_model');
+  document.getElementById('btn-clear').textContent = t('btn_clear');
+  document.getElementById('btn-retry').textContent = t('btn_retry');
+
+  document.querySelector('#phase-1 .phase-text').textContent = t('phase_1');
+  document.querySelector('#phase-2 .phase-text').textContent = t('phase_2');
+  document.querySelector('#phase-3 .phase-text').textContent = t('phase_3');
+
+  updateHistoryBar();
+}
+
+// ── API Config persistence ─────────────────────────────────────────────────
+function saveConfig() {
+  const cfg = {
+    baseUrl: document.getElementById('input-base-url').value,
+    apiKey: document.getElementById('input-api-key').value,
+    model: document.getElementById('input-model').value,
+  };
+  localStorage.setItem('debate_api_config', JSON.stringify(cfg));
+}
+
+function loadConfig() {
+  try {
+    const cfg = JSON.parse(localStorage.getItem('debate_api_config'));
+    if (cfg) {
+      document.getElementById('input-base-url').value = cfg.baseUrl || '';
+      document.getElementById('input-api-key').value = cfg.apiKey || '';
+      document.getElementById('input-model').value = cfg.model || '';
+    }
+  } catch {}
+}
+
+function clearConfig() {
+  document.getElementById('input-base-url').value = '';
+  document.getElementById('input-api-key').value = '';
+  document.getElementById('input-model').value = '';
+  localStorage.removeItem('debate_api_config');
+}
+
+function getConfig() {
+  const baseUrl = document.getElementById('input-base-url').value.trim();
+  const apiKey = document.getElementById('input-api-key').value.trim();
+  const model = document.getElementById('input-model').value.trim();
+  if (!baseUrl || !apiKey || !model) return null;
+  return { baseUrl, apiKey, model };
+}
+
+// ── History bar ─────────────────────────────────────────────────────────────
+function updateHistoryBar() {
+  const bar = document.getElementById('history-bar');
+  if (roundNum > 0) {
+    bar.classList.add('active');
+    document.getElementById('history-text').innerHTML =
+      `<span class="history-count">${t('history_info').replace('{n}', roundNum)}</span>`;
+  } else {
+    bar.classList.remove('active');
+  }
+}
+
+function newSession() {
+  roundNum = 0;
+  roundHistory = [];
+  lastResult = null;
+  updateHistoryBar();
+  resetForm();
+}
+
+// ── Language detection ──────────────────────────────────────────────────────
+function detectInputLang(text) {
+  const cjk = text.match(/[\u4e00-\u9fff\u3400-\u4dbf]/g);
+  return cjk && cjk.length > 0 ? 'zh' : 'en';
+}
+
+// ── OpenAI-compatible API call ──────────────────────────────────────────────
+async function callLLM(config, systemPrompt, userMessage, temperature, inputLang) {
+  const langInstruction = inputLang === 'zh'
+    ? '\n\nIMPORTANT: Respond entirely in Chinese (中文).'
+    : '\n\nIMPORTANT: Respond entirely in English.';
+
+  const url = config.baseUrl.replace(/\/+$/, '') + '/chat/completions';
+
+  const body = {
+    model: config.model,
+    temperature,
+    messages: [
+      { role: 'system', content: systemPrompt + langInstruction },
+      { role: 'user', content: userMessage }
+    ]
+  };
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${config.apiKey}`
+    },
+    body: JSON.stringify(body)
+  });
+
+  if (!res.ok) {
+    const errBody = await res.text();
+    throw new Error(`HTTP ${res.status}: ${errBody}`);
+  }
+
+  const data = await res.json();
+  let text = data.choices[0].message.content.trim();
+
+  // Strip markdown fences if present
+  if (text.startsWith('```')) {
+    text = text.split('\n').slice(1).join('\n');
+    const lastFence = text.lastIndexOf('```');
+    if (lastFence !== -1) text = text.substring(0, lastFence).trim();
+  }
+
+  return JSON.parse(text);
+}
+
+function formatHistoryText() {
+  if (roundHistory.length === 0) return '';
+  let histText = '=== CONVERSATION HISTORY ===\n';
+  roundHistory.forEach((r, i) => {
+    histText += `\n--- Round ${i + 1} ---\n`;
+    histText += `Context: ${r.context}\n`;
+    histText += `Opponent: ${r.opponent_message}\n`;
+    histText += `Goal: ${r.goal}\n`;
+    if (r.chosen_response) {
+      histText += `Your response: ${r.chosen_response}\n`;
+    }
+  });
+  histText += '\n=== END HISTORY ===\n\n';
+  return histText;
+}
+
+// ── Analyze ─────────────────────────────────────────────────────────────────
+async function analyze() {
+  const ctx = document.getElementById('input-context').value.trim();
+  const msg = document.getElementById('input-message').value.trim();
+  const goal = document.querySelector('input[name="goal"]:checked').value;
+
+  if (!ctx || !msg) {
+    alert(currentLang === 'zh' ? '请填写背景和对方消息' : 'Please fill in context and opponent message');
+    return;
+  }
+
+  const config = getConfig();
+  if (!config) {
+    alert(t('err_no_config'));
+    return;
+  }
+  saveConfig();
+
+  const btn = document.getElementById('btn-analyze');
+  btn.disabled = true;
+  document.getElementById('error-notice').classList.remove('active');
+  document.getElementById('results').classList.remove('active');
+
+  const proc = document.getElementById('processing');
+  proc.classList.add('active');
+  ['phase-1', 'phase-2', 'phase-3'].forEach(id => {
+    document.getElementById(id).classList.remove('active', 'done');
+  });
+
+  try {
+    const goalLabel = { debate: 'Debate', deescalate: 'De-escalate', burn: 'Burn' }[goal];
+    const inputLang = detectInputLang(ctx + ' ' + msg);
+    const historyPrefix = formatHistoryText();
+    const userBase = `Context of the conversation:\n${ctx}\n\nOpponent's message:\n${msg}`;
+    const userWithHistory = historyPrefix + userBase;
+
+    // Phase 1: Analyst + Logician in parallel
+    document.getElementById('phase-1').classList.add('active');
+    const [analystResult, logicianResult] = await Promise.all([
+      callLLM(config, SYSTEM_PROMPTS.analyst, userWithHistory, 0.4, inputLang),
+      callLLM(config, SYSTEM_PROMPTS.logician, userWithHistory, 0.3, inputLang)
+    ]);
+    document.getElementById('phase-1').classList.remove('active');
+    document.getElementById('phase-1').classList.add('done');
+
+    // Phase 2: Tactician
+    document.getElementById('phase-2').classList.add('active');
+    const tacticianUser = historyPrefix +
+      `CONTEXT:\n${ctx}\n\nOPPONENT MESSAGE:\n${msg}\n\nUSER'S GOAL: ${goalLabel}\n\n` +
+      `ANALYST REPORT:\n${JSON.stringify(analystResult, null, 2)}\n\n` +
+      `LOGICIAN REPORT:\n${JSON.stringify(logicianResult, null, 2)}`;
+    const tacticianResult = await callLLM(config, SYSTEM_PROMPTS.tactician, tacticianUser, 0.5, inputLang);
+    document.getElementById('phase-2').classList.remove('active');
+    document.getElementById('phase-2').classList.add('done');
+
+    // Phase 3: Copywriter
+    document.getElementById('phase-3').classList.add('active');
+    const copywriterUser = historyPrefix +
+      `CONTEXT:\n${ctx}\n\nOPPONENT MESSAGE:\n${msg}\n\nUSER'S GOAL: ${goalLabel}\n\n` +
+      `BATTLE PLAN:\n${JSON.stringify(tacticianResult, null, 2)}`;
+    const copywriterResult = await callLLM(config, SYSTEM_PROMPTS.copywriter, copywriterUser, 0.7, inputLang);
+    document.getElementById('phase-3').classList.remove('active');
+    document.getElementById('phase-3').classList.add('done');
+
+    proc.classList.remove('active');
+    roundNum++;
+
+    lastResult = {
+      analyst: analystResult,
+      logician: logicianResult,
+      tactician: tacticianResult,
+      copywriter: copywriterResult
+    };
+
+    roundHistory.push({ context: ctx, opponent_message: msg, goal: goalLabel });
+
+    buildResults(ctx, msg, goal, lastResult);
+    document.getElementById('results').classList.add('active');
+    btn.disabled = false;
+    updateHistoryBar();
+    document.getElementById('results').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  } catch (err) {
+    proc.classList.remove('active');
+    ['phase-1', 'phase-2', 'phase-3'].forEach(id => {
+      document.getElementById(id).classList.remove('active');
+    });
+
+    const errNotice = document.getElementById('error-notice');
+    const errMsg = err.message || String(err);
+    document.getElementById('error-text').textContent =
+      (errMsg.includes('JSON') ? t('err_parse') : t('err_network')) + errMsg;
+    errNotice.classList.add('active');
+    btn.disabled = false;
+  }
+}
+
+// ── Build results ───────────────────────────────────────────────────────────
+function buildResults(ctx, msg, goal, data) {
+  const goalLabels = { debate: t('goal_debate'), deescalate: t('goal_deescalate'), burn: t('goal_burn') };
+
+  document.getElementById('table-caption').textContent = t('round_label').replace('{n}', roundNum) + ' — ' + t('table_caption');
+  document.getElementById('table-body').innerHTML = `
+    <tr><th>${t('th_context')}</th><td>${esc(ctx)}</td></tr>
+    <tr><th>${t('th_message')}</th><td>${esc(msg)}</td></tr>
+    <tr><th>${t('th_goal')}</th><td>${goalLabels[goal]}</td></tr>
+  `;
+
+  document.getElementById('report-title').textContent = t('report_title');
+  const a = data.analyst;
+  const l = data.logician;
+  const tc = data.tactician;
+
+  let html = '';
+
+  html += `<div class="section-header h-psych">${t('section_psych')}</div>`;
+  html += detail(t('label_motive'), a.motive_analysis || '—');
+  html += detail(t('label_trigger'), a.emotional_trigger || '—');
+  html += detail(t('label_insecurity'), a.underlying_insecurity || '—');
+  html += detail(t('label_style'), a.communication_style || '—');
+
+  html += `<div class="section-header h-logic">${t('section_logic')}</div>`;
+  (l.fallacies || []).forEach((f, i) => {
+    html += `<div class="fallacy-item">
+      <div class="fallacy-name">${t('label_fallacy')} ${i+1}: ${esc(f.name || '')}</div>
+      <div class="fallacy-quote">"${esc(f.quote || '')}"</div>
+      <div>${esc(f.explanation || '')}</div>
+    </div>`;
+  });
+  html += detail(t('label_arg_structure'), l.argument_structure || '—');
+
+  html += `<div class="section-header h-tactics">${t('section_tactics')}</div>`;
+  html += `<div class="detail-value">${esc(tc.strategic_summary || '—')}</div>`;
+
+  html += `<div class="section-header h-traps">${t('section_traps')}</div>`;
+  (tc.traps_to_avoid || []).forEach(trap => {
+    html += `<div class="trap-item">${esc(trap)}</div>`;
+  });
+
+  document.getElementById('report-content').innerHTML = html;
+
+  const cw = data.copywriter;
+  const s = cw.tier_1_surgeon || {};
+  const tk = cw.tier_2_tank || {};
+  const nk = cw.tier_3_nuclear || {};
+
+  document.getElementById('response-panels').innerHTML = `
+    <div class="response-panel panel-surgeon">
+      <div class="response-header">
+        <h3>Tier 1 — ${t('tier_surgeon')}</h3>
+        <button class="btn-copy" onclick="copyResponse(this, 'surgeon')">${t('btn_copy')}</button>
+      </div>
+      <div class="response-desc">${esc(s.description || '')}</div>
+      <div class="response-text">${esc(s.response || '')}</div>
+    </div>
+    <div class="response-panel panel-tank">
+      <div class="response-header">
+        <h3>Tier 2 — ${t('tier_tank')}</h3>
+        <button class="btn-copy" onclick="copyResponse(this, 'tank')">${t('btn_copy')}</button>
+      </div>
+      <div class="response-desc">${esc(tk.description || '')}</div>
+      <div class="response-text">${esc(tk.response || '')}</div>
+    </div>
+    <div class="response-panel panel-nuclear">
+      <div class="response-header">
+        <h3>Tier 3 — ${t('tier_nuclear')}</h3>
+        <button class="btn-copy" onclick="copyResponse(this, 'nuclear')">${t('btn_copy')}</button>
+      </div>
+      <div class="response-desc">${esc(nk.description || '')}</div>
+      <div class="response-text">${esc(nk.response || '')}</div>
+    </div>
+  `;
+}
+
+function detail(label, value) {
+  return `<div class="detail-label">${label}</div><div class="detail-value">${esc(value)}</div>`;
+}
+
+function esc(s) {
+  if (s == null) return '';
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+// ── Copy response ───────────────────────────────────────────────────────────
+const RESPONSE_KEYS = { surgeon: 'tier_1_surgeon', tank: 'tier_2_tank', nuclear: 'tier_3_nuclear' };
+
+function copyResponse(btn, tier) {
+  if (!lastResult) return;
+  const text = (lastResult.copywriter[RESPONSE_KEYS[tier]] || {}).response || '';
+  navigator.clipboard.writeText(text).then(() => {
+    btn.textContent = t('btn_copied');
+    btn.classList.add('copied');
+    setTimeout(() => {
+      btn.textContent = t('btn_copy');
+      btn.classList.remove('copied');
+    }, 2000);
+  });
+}
+
+// ── Reset ───────────────────────────────────────────────────────────────────
+function resetForm() {
+  document.getElementById('input-context').value = '';
+  document.getElementById('input-message').value = '';
+  document.getElementById('goal-debate').checked = true;
+  document.getElementById('results').classList.remove('active');
+  document.getElementById('processing').classList.remove('active');
+  document.getElementById('error-notice').classList.remove('active');
+  ['phase-1', 'phase-2', 'phase-3'].forEach(id => {
+    document.getElementById(id).classList.remove('active', 'done');
+  });
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ── Init ────────────────────────────────────────────────────────────────────
+loadConfig();
+applyI18n();
+</script>
+</body>
+</html>

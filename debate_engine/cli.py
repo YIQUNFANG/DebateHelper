@@ -327,14 +327,19 @@ async def async_main() -> None:
             continue
 
         console.print()
+        console.print(f"[dim]{S['prompt_again_choices']}[/]")
         try:
             again = Prompt.ask(
                 S["prompt_again"],
-                choices=["y", "n"],
+                choices=["y", "n", "r"],
                 default="n",
             )
         except (EOFError, KeyboardInterrupt):
             break
+        if again == "r":
+            history.clear()
+            console.print(S["history_cleared"])
+            continue
         if again != "y":
             break
 

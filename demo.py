@@ -304,7 +304,12 @@ async def main():
         console.rule("[dim]", style="dim")
 
         console.print()
-        again = Prompt.ask(S["prompt_again"], choices=["y", "n"], default="n")
+        console.print(f"[dim]{S['prompt_again_choices']}[/]")
+        again = Prompt.ask(S["prompt_again"], choices=["y", "n", "r"], default="n")
+        if again == "r":
+            history.clear()
+            console.print(S["history_cleared"])
+            continue
         if again != "y":
             break
 

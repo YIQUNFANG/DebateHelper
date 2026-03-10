@@ -66,6 +66,11 @@ class ContextHistory:
     def round_count(self) -> int:
         return len(self._rounds)
 
+    def clear(self) -> None:
+        """Clear all rounds and reset to a fresh session."""
+        self._rounds.clear()
+        self._flush()
+
     def format_for_agents(self) -> str:
         """Build a concise text summary of prior rounds for agent context injection."""
         if not self._rounds:
