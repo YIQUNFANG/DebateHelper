@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "debate-engine"
+version = "1.0.0"
+description = "Multi-agent argument analysis and response generation CLI"
+requires-python = ">=3.10"
+dependencies = [
+    "openai>=1.0.0",
+    "rich>=13.0.0",
+    "python-dotenv>=1.0.0",
+]
+
+[project.scripts]
+debate-engine = "debate_engine.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["debate_engine*"]
