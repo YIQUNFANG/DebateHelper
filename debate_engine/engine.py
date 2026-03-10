@@ -20,13 +20,13 @@ class State:
 
 
 class DebateOrchestrator:
-    def __init__(self, base_url: str, api_key: str, model: str):
+    def __init__(self, base_url: str, api_key: str, model: str, output_lang: str = "zh"):
         self.client = AsyncOpenAI(base_url=base_url, api_key=api_key)
         self.model = model
-        self.analyst = AnalystAgent(self.client, model)
-        self.logician = LogicianAgent(self.client, model)
-        self.tactician = TacticianAgent(self.client, model)
-        self.copywriter = CopywriterAgent(self.client, model)
+        self.analyst = AnalystAgent(self.client, model, output_lang=output_lang)
+        self.logician = LogicianAgent(self.client, model, output_lang=output_lang)
+        self.tactician = TacticianAgent(self.client, model, output_lang=output_lang)
+        self.copywriter = CopywriterAgent(self.client, model, output_lang=output_lang)
 
     async def run(self, state: State, on_phase=None) -> State:
         """Execute the full pipeline, calling on_phase(name) at each stage."""

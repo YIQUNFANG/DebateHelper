@@ -1,19 +1,19 @@
-"""分析师 — 心理情报探员
+"""Analyst — Psychological Intelligence Agent
 
-技能：归因理论、自恋创伤检测
-任务：解码「他们为什么这么说」
+Skills: Attribution Theory, Narcissistic Injury Detection
+Task: Decode "why they said what they said"
 """
 
 import json
 from openai import AsyncOpenAI
 
-SYSTEM_PROMPT = """\
+_BASE_PROMPT = """\
 你是「分析师」，一位精通社会心理学、归因理论和自恋创伤检测的专家。\
 你的任务是解码对手在冲突或辩论中发送消息背后的心理动机。
 
 给定对话的背景和对手的消息，生成一个 JSON 分析，包含以下字段：
 
-{
+{{
   "motive_analysis": "简明解释对方为什么说了这些话，引用归因理论\
 （内部归因 vs 外部归因、基本归因错误、自利性偏差）。",
   "emotional_trigger": "驱动该消息的具体情绪（如：害怕失去地位、\
@@ -23,19 +23,24 @@ SYSTEM_PROMPT = """\
   "communication_style": "分类他们的沟通风格：攻击型、被动攻击型、\
 轻蔑型、转移型、自大型 或 受害者姿态型。",
   "leverage_points": ["列出 2-3 个可以在回复中合理利用的心理施压点。"]
-}
+}}
 
 规则：
 - 精确分析，基于可观察的语言线索，不要过度推测。
-- 所有分析必须用中文输出。
+- {lang_instruction}
 - 仅输出有效 JSON —— 不要 markdown 代码块，不要额外评论。
 """
 
 
 class AnalystAgent:
-    def __init__(self, client: AsyncOpenAI, model: str):
+    def __init__(self, client: AsyncOpenAI, model: str, output_lang: str = "zh"):
         self.client = client
         self.model = model
+        if output_lang == "en":
+            lang_instruction = "All analysis must be output in English."
+        else:
+            lang_instruction = "所有分析必须用中文输出。"
+        self.system_prompt = _BASE_PROMPT.format(lang_instruction=lang_instruction)
 
     async def run(self, context: str, opponent_message: str, history: str = "") -> dict:
         user_parts = []
@@ -48,7 +53,7 @@ class AnalystAgent:
             model=self.model,
             temperature=0.4,
             messages=[
-                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "system", "content": self.system_prompt},
                 {"role": "user", "content": "\n".join(user_parts)},
             ],
         )

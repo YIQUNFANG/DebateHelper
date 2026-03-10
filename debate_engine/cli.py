@@ -16,26 +16,29 @@ from rich import box
 
 from debate_engine.engine import DebateOrchestrator, State
 from debate_engine.context_history import ContextHistory
+from debate_engine.i18n import detect_lang, get_strings
 
 console = Console()
 
+# ── Fancy block-character banner ──────────────────────────────────────────────
+
 BANNER = r"""
- ____       _           _         _____             _
-|  _ \  ___| |__   __ _| |_ ___  | ____|_ __   __ _(_)_ __   ___
-| | | |/ _ \ '_ \ / _` | __/ _ \ |  _| | '_ \ / _` | | '_ \ / _ \
-| |_| |  __/ |_) | (_| | ||  __/ | |___| | | | (_| | | | | |  __/
-|____/ \___|_.__/ \__,_|\__\___| |_____|_| |_|\__, |_|_| |_|\___|
-                                               |___/
+[bold cyan]██████╗ [bold magenta]███████╗[bold cyan]██████╗  [bold magenta] █████╗ [bold cyan]████████╗[bold magenta]███████╗[/]
+[bold cyan]██╔══██╗[bold magenta]██╔════╝[bold cyan]██╔══██╗[bold magenta]██╔══██╗[bold cyan]╚══██╔══╝[bold magenta]██╔════╝[/]
+[bold cyan]██║  ██║[bold magenta]█████╗  [bold cyan]██████╔╝[bold magenta]███████║[bold cyan]   ██║   [bold magenta]█████╗  [/]
+[bold cyan]██║  ██║[bold magenta]██╔══╝  [bold cyan]██╔══██╗[bold magenta]██╔══██║[bold cyan]   ██║   [bold magenta]██╔══╝  [/]
+[bold cyan]██████╔╝[bold magenta]███████╗[bold cyan]██████╔╝[bold magenta]██║  ██║[bold cyan]   ██║   [bold magenta]███████╗[/]
+[bold cyan]╚═════╝ [bold magenta]╚══════╝[bold cyan]╚═════╝ [bold magenta]╚═╝  ╚═╝[bold cyan]   ╚═╝   [bold magenta]╚══════╝[/]
+
+[bold green]██╗  ██╗[bold yellow]███████╗[bold green]██╗     [bold yellow]██████╗ [bold green]███████╗[bold yellow]██████╗ [/]
+[bold green]██║  ██║[bold yellow]██╔════╝[bold green]██║     [bold yellow]██╔══██╗[bold green]██╔════╝[bold yellow]██╔══██╗[/]
+[bold green]███████║[bold yellow]█████╗  [bold green]██║     [bold yellow]██████╔╝[bold green]█████╗  [bold yellow]██████╔╝[/]
+[bold green]██╔══██║[bold yellow]██╔══╝  [bold green]██║     [bold yellow]██╔═══╝ [bold green]██╔══╝  [bold yellow]██╔══██╗[/]
+[bold green]██║  ██║[bold yellow]███████╗[bold green]███████╗[bold yellow]██║     [bold green]███████╗[bold yellow]██║  ██║[/]
+[bold green]╚═╝  ╚═╝[bold yellow]╚══════╝[bold green]╚══════╝[bold yellow]╚═╝     [bold green]╚══════╝[bold yellow]╚═╝  ╚═╝[/]
 """
 
-PHASE_LABELS = {
-    "parallel_analysis": "[bold cyan]阶段一：[/] 分析师 + 逻辑师 并行运行中...",
-    "strategic_synthesis": "[bold yellow]阶段二：[/] 战术师 合成作战计划中...",
-    "response_generation": "[bold green]阶段三：[/] 文案师 生成三级回复中...",
-}
-
 GOAL_CHOICES = {"1": "Debate", "2": "De-escalate", "3": "Burn"}
-GOAL_MAP = {"Debate": "辩论", "De-escalate": "降级", "Burn": "焚烧"}
 GOAL_ALIASES = {
     "debate": "Debate", "辩论": "Debate",
     "de-escalate": "De-escalate", "降级": "De-escalate",
@@ -46,53 +49,53 @@ GOAL_ALIASES = {
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(
         prog="debate-engine",
-        description="多智能体论证分析与回复生成 CLI",
+        description="DebateHelper — Multi-agent argument analysis & tactical response CLI",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""\
-示例:
-  # 交互模式（推荐）
+Examples:
+  # Interactive mode (recommended)
   debate-engine --api-key sk-xxx
 
-  # 单次模式
+  # One-shot mode
   debate-engine --api-key sk-xxx \\
-    --context "我发了一个求婚视频" \\
-    --message "倒贴，廉价" \\
-    --goal burn
+    -c "I posted a proposal video" \\
+    -m "That's pathetic" \\
+    -g burn
 
-  # 使用 .env 文件
-  cp .env.example .env   # 编辑 .env 填入密钥
-  debate-engine
+  # Chinese interface
+  debate-engine --lang zh --api-key sk-xxx
 
-  # 使用环境变量
-  export API_KEY=sk-xxx
-  debate-engine
-
-  # 兼容任何 OpenAI API（Ollama / LM Studio / Azure 等）
+  # Any OpenAI-compatible API (Ollama / LM Studio / Gemini / Azure)
   debate-engine --base-url http://localhost:11434/v1 --api-key ollama --model llama3
 """,
     )
 
-    api = p.add_argument_group("API 配置")
+    api = p.add_argument_group("API Configuration")
     api.add_argument("--base-url", metavar="URL",
-                     help="OpenAI 兼容 API 地址 (默认: $API_BASE_URL 或 https://api.openai.com/v1)")
+                     help="OpenAI-compatible API endpoint (default: $API_BASE_URL or https://api.openai.com/v1)")
     api.add_argument("--api-key", metavar="KEY",
-                     help="API 密钥 (默认: $API_KEY)")
+                     help="API key (default: $API_KEY)")
     api.add_argument("--model", metavar="MODEL",
-                     help="模型名称 (默认: $MODEL_NAME 或 gpt-4o)")
+                     help="Model name (default: $MODEL_NAME or gpt-4o)")
 
-    one_shot = p.add_argument_group("单次模式（全部提供则跳过交互输入）")
+    lang = p.add_argument_group("Language")
+    lang.add_argument("--lang", metavar="LANG", choices=["zh", "en", "auto"],
+                      default="auto",
+                      help="UI language: zh (Chinese), en (English), auto (detect from locale). Default: auto")
+
+    one_shot = p.add_argument_group("One-shot mode (skip interactive prompts when all provided)")
     one_shot.add_argument("-c", "--context", metavar="TEXT",
-                          help="对话背景")
+                          help="Conversation context / background")
     one_shot.add_argument("-m", "--message", metavar="TEXT",
-                          help="对方的消息")
+                          help="Opponent's message")
     one_shot.add_argument("-g", "--goal", metavar="GOAL",
                           choices=["debate", "de-escalate", "burn", "辩论", "降级", "焚烧", "1", "2", "3"],
-                          help="目标: debate/de-escalate/burn 或 辩论/降级/焚烧 或 1/2/3")
+                          help="Goal: debate/de-escalate/burn or 1/2/3")
 
     return p.parse_args()
 
 
-def resolve_config(args: argparse.Namespace) -> tuple[str, str, str]:
+def resolve_config(args: argparse.Namespace, S: dict) -> tuple[str, str, str]:
     """Resolve API config: CLI flags > env vars > .env file > interactive prompt."""
     load_dotenv()
 
@@ -101,7 +104,7 @@ def resolve_config(args: argparse.Namespace) -> tuple[str, str, str]:
     model = args.model or os.getenv("MODEL_NAME") or "gpt-4o"
 
     if not api_key:
-        api_key = Prompt.ask("[bold]API Key[/]")
+        api_key = Prompt.ask(S["api_key_prompt"])
 
     return base_url, api_key, model
 
@@ -113,66 +116,79 @@ def resolve_goal(raw: str) -> str:
     return GOAL_ALIASES.get(raw.lower(), raw)
 
 
-def collect_input() -> tuple[str, str, str]:
+def resolve_lang(raw: str) -> str:
+    """Resolve language setting."""
+    if raw == "auto":
+        return detect_lang()
+    return raw
+
+
+def collect_input(S: dict) -> tuple[str, str, str]:
     """Gather context, opponent message, and goal interactively."""
     console.print()
-    context = Prompt.ask("[bold magenta]背景[/]（什么情况？）")
+    context = Prompt.ask(S["prompt_context"])
     console.print()
-    opponent_message = Prompt.ask("[bold red]对方消息[/]（对方说了什么？）")
+    opponent_message = Prompt.ask(S["prompt_message"])
     console.print()
-    console.print("[bold]选择你的目标：[/]")
-    console.print("  [cyan]1[/] 辩论   — 在逻辑和内容上取胜")
-    console.print("  [yellow]2[/] 降级   — 化解冲突但不退让")
-    console.print("  [red]3[/] 焚烧   — 最大伤害")
-    goal_key = Prompt.ask("[bold]目标 [1/2/3][/]", choices=["1", "2", "3"])
+    console.print(S["prompt_goal_header"])
+    console.print(S["goal_1_label"])
+    console.print(S["goal_2_label"])
+    console.print(S["goal_3_label"])
+    goal_key = Prompt.ask(S["prompt_goal"], choices=["1", "2", "3"])
     return context, opponent_message, GOAL_CHOICES[goal_key]
 
 
-def render_input(context: str, opponent_message: str, goal: str, round_num: int) -> None:
+def render_input(context: str, opponent_message: str, goal: str, round_num: int, S: dict) -> None:
+    goal_display = {
+        "Debate": S["goal_debate"],
+        "De-escalate": S["goal_deescalate"],
+        "Burn": S["goal_burn"],
+    }
     table = Table(
-        title=f"输入场景（第 {round_num} 轮）",
+        title=S["table_title"].format(round_num=round_num),
         box=box.ROUNDED,
         title_style="bold white",
         show_lines=True,
     )
-    table.add_column("字段", style="bold", width=16)
-    table.add_column("内容", ratio=1)
-    table.add_row("背景", context)
-    table.add_row("对方消息", f"[bold red]{opponent_message}[/]")
-    table.add_row("目标", f"[bold magenta]{GOAL_MAP.get(goal, goal)}[/]")
+    table.add_column(S["table_col_field"], style="bold", width=16)
+    table.add_column(S["table_col_content"], ratio=1)
+    table.add_row(S["table_row_context"], context)
+    table.add_row(S["table_row_message"], f"[bold red]{opponent_message}[/]")
+    table.add_row(S["table_row_goal"], f"[bold magenta]{goal_display.get(goal, goal)}[/]")
     console.print(table)
 
 
-def render_summary(analyst: dict, logician: dict, plan: dict) -> None:
+def render_summary(analyst: dict, logician: dict, plan: dict, S: dict) -> None:
     lines = []
-    lines.append("[bold cyan]◆ 心理分析摘要[/]")
-    lines.append(f"  动机：{analyst.get('motive_analysis', '—')}")
-    lines.append(f"  触发点：{analyst.get('emotional_trigger', '—')}")
-    lines.append(f"  不安全感：{analyst.get('underlying_insecurity', '—')}")
-    lines.append(f"  沟通风格：{analyst.get('communication_style', '—')}")
+    lines.append(S["section_psych"])
+    lines.append(f"{S['label_motive']}{analyst.get('motive_analysis', '—')}")
+    lines.append(f"{S['label_trigger']}{analyst.get('emotional_trigger', '—')}")
+    lines.append(f"{S['label_insecurity']}{analyst.get('underlying_insecurity', '—')}")
+    lines.append(f"{S['label_style']}{analyst.get('communication_style', '—')}")
 
     lines.append("")
-    lines.append("[bold blue]◆ 逻辑分析摘要[/]")
+    lines.append(S["section_logic"])
     for i, f in enumerate(logician.get("fallacies", []), 1):
-        lines.append(f"  谬误{i}：{f.get('name', '?')}  ← 「{f.get('quote', '')}」")
-    lines.append(f"  论证结构：{logician.get('argument_structure', '—')}")
+        label = S["label_fallacy"].format(i=i)
+        lines.append(f"{label}{f.get('name', '?')}  <- \"{f.get('quote', '')}\"")
+    lines.append(f"{S['label_arg_structure']}{logician.get('argument_structure', '—')}")
 
     lines.append("")
-    lines.append("[bold yellow]◆ 战术摘要[/]")
+    lines.append(S["section_tactics"])
     lines.append(f"  {plan.get('strategic_summary', '—')}")
 
     traps = plan.get("traps_to_avoid", [])
     if traps:
         lines.append("")
-        lines.append("[dim red]◆ 需要避开的陷阱[/]")
+        lines.append(S["section_traps"])
         for t in traps:
-            lines.append(f"  • {t}")
+            lines.append(f"  * {t}")
 
     console.print()
     console.print(
         Panel(
             "\n".join(lines),
-            title="[bold]综合分析报告[/]",
+            title=S["summary_title"],
             title_align="left",
             border_style="bright_white",
             padding=(1, 2),
@@ -209,16 +225,23 @@ async def run_round(
     context: str,
     opponent_message: str,
     goal: str,
+    S: dict,
 ) -> None:
     """Execute one full analysis round."""
     round_num = history.round_count() + 1
 
-    render_input(context, opponent_message, goal, round_num)
+    render_input(context, opponent_message, goal, round_num, S)
     console.print()
+
+    phase_labels = {
+        "parallel_analysis": S["phase_parallel"],
+        "strategic_synthesis": S["phase_synthesis"],
+        "response_generation": S["phase_responses"],
+    }
 
     history_text = history.format_for_agents()
     if round_num > 1:
-        console.print(f"[dim]已加载前 {round_num - 1} 轮对话历史作为上下文[/]")
+        console.print(S["history_loaded"].format(n=round_num - 1))
 
     state = State(
         context=context,
@@ -233,7 +256,7 @@ async def run_round(
         nonlocal current_status
         if current_status:
             current_status.stop()
-        label = PHASE_LABELS.get(name, name)
+        label = phase_labels.get(name, name)
         current_status = console.status(label, spinner="dots")
         current_status.start()
 
@@ -254,30 +277,32 @@ async def run_round(
     )
 
     console.print()
-    console.rule(f"[bold]第 {round_num} 轮分析完成", style="green")
+    console.rule(S["round_done"].format(round_num=round_num), style="green")
 
-    render_summary(state.analyst_report, state.logician_report, state.battle_plan)
+    render_summary(state.analyst_report, state.logician_report, state.battle_plan, S)
     render_responses(state.responses)
 
     console.print()
-    console.print(f"[dim]第 {round_num} 轮已保存至会话历史[/]")
+    console.print(S["round_saved"].format(round_num=round_num))
     console.rule("[dim]", style="dim")
 
 
 async def async_main() -> None:
     args = parse_args()
+    lang = resolve_lang(args.lang)
+    S = get_strings(lang)
 
-    console.print(BANNER, style="bold cyan")
-    console.print("[dim]多智能体论证分析 — 支持多轮对话历史上下文\n[/]")
+    console.print(BANNER)
+    console.print(f"[dim]{S['subtitle']}\n[/]")
 
-    base_url, api_key, model = resolve_config(args)
-    console.print(f"[dim]API: {base_url}  模型: {model}[/]\n")
+    base_url, api_key, model = resolve_config(args, S)
+    console.print(f"[dim]{S['api_info'].format(base_url=base_url, model=model)}[/]\n")
 
-    orchestrator = DebateOrchestrator(base_url, api_key, model)
+    orchestrator = DebateOrchestrator(base_url, api_key, model, output_lang=lang)
     history = ContextHistory()
 
     def _sigint_handler(sig, frame):
-        console.print("\n[dim]会话结束，历史文件已清理。[/]")
+        console.print(f"\n{S['session_end']}")
         sys.exit(0)
 
     signal.signal(signal.SIGINT, _sigint_handler)
@@ -285,26 +310,26 @@ async def async_main() -> None:
     # One-shot mode: all inputs provided via CLI
     if args.context and args.message and args.goal:
         goal = resolve_goal(args.goal)
-        await run_round(orchestrator, history, args.context, args.message, goal)
+        await run_round(orchestrator, history, args.context, args.message, goal, S)
         return
 
     # Interactive loop
     while True:
         try:
-            context, opponent_message, goal = collect_input()
+            context, opponent_message, goal = collect_input(S)
         except (EOFError, KeyboardInterrupt):
             break
 
         try:
-            await run_round(orchestrator, history, context, opponent_message, goal)
+            await run_round(orchestrator, history, context, opponent_message, goal, S)
         except Exception as e:
-            console.print(f"\n[bold red]错误：[/] {e}")
+            console.print(f"\n{S['error_prefix']}{e}")
             continue
 
         console.print()
         try:
             again = Prompt.ask(
-                "[bold]继续分析下一条消息？[/]",
+                S["prompt_again"],
                 choices=["y", "n"],
                 default="n",
             )
@@ -313,7 +338,7 @@ async def async_main() -> None:
         if again != "y":
             break
 
-    console.print("[dim]会话结束，历史文件已清理。[/]")
+    console.print(S["session_end"])
 
 
 def main() -> None:

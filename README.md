@@ -60,6 +60,14 @@ DebateHelper tracks the entire conversation across rounds. Each new analysis bui
 - API key provided via CLI flag, environment variable, or `.env` file
 - Zero telemetry, zero data collection
 
+### Bilingual Support (中文 / English)
+DebateHelper runs natively in both Chinese and English — UI prompts, analysis reports, and generated responses all adapt to your language setting.
+
+- Auto-detects language from system locale (or set manually with `--lang`)
+- `--lang zh` — Chinese interface + Chinese agent output
+- `--lang en` — English interface + English agent output
+- `--lang auto` — detect from system locale (default)
+
 ### Geek-Centric Terminal UI
 A beautiful, color-coded terminal interface powered by [Rich](https://github.com/Textualize/rich):
 
@@ -75,7 +83,7 @@ A beautiful, color-coded terminal interface powered by [Rich](https://github.com
 ### Install
 
 ```bash
-git clone <repo-url> && cd debate-engine
+git clone https://github.com/YIQUNFANG/DebateHelper.git && cd DebateHelper
 pip install .
 ```
 
@@ -94,6 +102,14 @@ debate-engine \
   --api-key sk-xxx \
   --context "I posted an article and got a hostile comment" \
   --message "Nobody even reads this, lmao" \
+  --goal burn
+
+# Chinese interface
+debate-engine \
+  --api-key sk-xxx \
+  --lang zh \
+  --context "我发了一篇文章，收到了一条恶意评论" \
+  --message "根本没人看你写的东西，笑死" \
   --goal burn
 ```
 
@@ -119,6 +135,7 @@ DebateHelper resolves configuration in this priority order: **CLI flags > Enviro
 | `-c, --context` | Conversation background (one-shot mode) | — |
 | `-m, --message` | Opponent's message (one-shot mode) | — |
 | `-g, --goal` | Goal: `debate` / `de-escalate` / `burn` or `1` / `2` / `3` | — |
+| `--lang` | UI language: `zh` / `en` / `auto` | `auto` (detect from locale) |
 
 ### Environment Variables
 

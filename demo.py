@@ -15,26 +15,19 @@ from rich import box
 
 from debate_engine.engine import DebateOrchestrator, State
 from debate_engine.context_history import ContextHistory
+from debate_engine.cli import BANNER
+from debate_engine.i18n import detect_lang, get_strings
 
 console = Console()
 
-BANNER = r"""
- ____       _           _         _____             _
-|  _ \  ___| |__   __ _| |_ ___  | ____|_ __   __ _(_)_ __   ___
-| | | |/ _ \ '_ \ / _` | __/ _ \ |  _| | '_ \ / _` | | '_ \ / _ \
-| |_| |  __/ |_) | (_| | ||  __/ | |___| | | | (_| | | | | |  __/
-|____/ \___|_.__/ \__,_|\__\___| |_____|_| |_|\__, |_|_| |_|\___|
-                                               |___/
-"""
-
-PHASE_LABELS = {
-    "parallel_analysis": "[bold cyan]阶段一：[/] 分析师 + 逻辑师 并行运行中...",
-    "strategic_synthesis": "[bold yellow]阶段二：[/] 战术师 合成作战计划中...",
-    "response_generation": "[bold green]阶段三：[/] 文案师 生成三级回复中...",
-}
+S = get_strings(detect_lang())
 
 GOAL_CHOICES = {"1": "Debate", "2": "De-escalate", "3": "Burn"}
-GOAL_MAP = {"Debate": "辩论", "De-escalate": "降级", "Burn": "焚烧"}
+GOAL_MAP = {
+    "Debate": S["goal_debate"],
+    "De-escalate": S["goal_deescalate"],
+    "Burn": S["goal_burn"],
+}
 
 # ── Mock Responses ───────────────────────────────────────────────────────────
 
@@ -206,39 +199,40 @@ SCENARIOS = {
 # ── Rendering (same as cli.py) ───────────────────────────────────────────────
 
 def render_input(context, opponent_message, goal, round_num):
-    table = Table(title=f"输入场景（第 {round_num} 轮）", box=box.ROUNDED,
+    table = Table(title=S["table_title"].format(round_num=round_num), box=box.ROUNDED,
                   title_style="bold white", show_lines=True)
-    table.add_column("字段", style="bold", width=16)
-    table.add_column("内容", ratio=1)
-    table.add_row("背景", context)
-    table.add_row("对方消息", f"[bold red]{opponent_message}[/]")
-    table.add_row("目标", f"[bold magenta]{GOAL_MAP.get(goal, goal)}[/]")
+    table.add_column(S["table_col_field"], style="bold", width=16)
+    table.add_column(S["table_col_content"], ratio=1)
+    table.add_row(S["table_row_context"], context)
+    table.add_row(S["table_row_message"], f"[bold red]{opponent_message}[/]")
+    table.add_row(S["table_row_goal"], f"[bold magenta]{GOAL_MAP.get(goal, goal)}[/]")
     console.print(table)
 
 
 def render_summary(analyst, logician, plan):
     lines = []
-    lines.append("[bold cyan]◆ 心理分析摘要[/]")
-    lines.append(f"  动机：{analyst.get('motive_analysis', '—')}")
-    lines.append(f"  触发点：{analyst.get('emotional_trigger', '—')}")
-    lines.append(f"  不安全感：{analyst.get('underlying_insecurity', '—')}")
-    lines.append(f"  沟通风格：{analyst.get('communication_style', '—')}")
+    lines.append(S["section_psych"])
+    lines.append(f"{S['label_motive']}{analyst.get('motive_analysis', '—')}")
+    lines.append(f"{S['label_trigger']}{analyst.get('emotional_trigger', '—')}")
+    lines.append(f"{S['label_insecurity']}{analyst.get('underlying_insecurity', '—')}")
+    lines.append(f"{S['label_style']}{analyst.get('communication_style', '—')}")
     lines.append("")
-    lines.append("[bold blue]◆ 逻辑分析摘要[/]")
+    lines.append(S["section_logic"])
     for i, f in enumerate(logician.get("fallacies", []), 1):
-        lines.append(f"  谬误{i}：{f.get('name', '?')}  ← 「{f.get('quote', '')}」")
-    lines.append(f"  论证结构：{logician.get('argument_structure', '—')}")
+        label = S["label_fallacy"].format(i=i)
+        lines.append(f"{label}{f.get('name', '?')}  <- \"{f.get('quote', '')}\"")
+    lines.append(f"{S['label_arg_structure']}{logician.get('argument_structure', '—')}")
     lines.append("")
-    lines.append("[bold yellow]◆ 战术摘要[/]")
+    lines.append(S["section_tactics"])
     lines.append(f"  {plan.get('strategic_summary', '—')}")
     traps = plan.get("traps_to_avoid", [])
     if traps:
         lines.append("")
-        lines.append("[dim red]◆ 需要避开的陷阱[/]")
+        lines.append(S["section_traps"])
         for t in traps:
-            lines.append(f"  • {t}")
+            lines.append(f"  * {t}")
     console.print()
-    console.print(Panel("\n".join(lines), title="[bold]综合分析报告[/]",
+    console.print(Panel("\n".join(lines), title=S["summary_title"],
                         title_align="left", border_style="bright_white", padding=(1, 2)))
 
 
@@ -256,41 +250,41 @@ def render_responses(responses):
 # ── Main ─────────────────────────────────────────────────────────────────────
 
 async def main():
-    console.print(BANNER, style="bold cyan")
-    console.print("[dim]多智能体论证分析 — 演示模式（无需 API 密钥）\n[/]")
+    console.print(BANNER)
+    console.print(f"[dim]{S['subtitle']} (Demo Mode)\n[/]")
 
     history = ContextHistory()
     scenario = SCENARIOS["default"]
 
-    signal.signal(signal.SIGINT, lambda s, f: (console.print("\n[dim]会话结束。[/]"), sys.exit(0)))
+    signal.signal(signal.SIGINT, lambda s, f: (console.print(f"\n{S['session_end']}"), sys.exit(0)))
 
     while True:
         round_num = history.round_count() + 1
 
         console.print()
-        context = Prompt.ask("[bold magenta]背景[/]（什么情况？）")
+        context = Prompt.ask(S["prompt_context"])
         console.print()
-        opponent_message = Prompt.ask("[bold red]对方消息[/]（对方说了什么？）")
+        opponent_message = Prompt.ask(S["prompt_message"])
         console.print()
-        console.print("[bold]选择你的目标：[/]")
-        console.print("  [cyan]1[/] 辩论   — 在逻辑和内容上取胜")
-        console.print("  [yellow]2[/] 降级   — 化解冲突但不退让")
-        console.print("  [red]3[/] 焚烧   — 最大伤害")
-        goal_key = Prompt.ask("[bold]目标 [1/2/3][/]", choices=["1", "2", "3"])
+        console.print(S["prompt_goal_header"])
+        console.print(S["goal_1_label"])
+        console.print(S["goal_2_label"])
+        console.print(S["goal_3_label"])
+        goal_key = Prompt.ask(S["prompt_goal"], choices=["1", "2", "3"])
         goal = GOAL_CHOICES[goal_key]
 
         render_input(context, opponent_message, goal, round_num)
         console.print()
 
         if round_num > 1:
-            console.print(f"[dim]已加载前 {round_num - 1} 轮对话历史作为上下文[/]")
+            console.print(S["history_loaded"].format(n=round_num - 1))
 
         # Simulate pipeline phases
-        with console.status(PHASE_LABELS["parallel_analysis"], spinner="dots"):
+        with console.status(S["phase_parallel"], spinner="dots"):
             await asyncio.sleep(1.2)
-        with console.status(PHASE_LABELS["strategic_synthesis"], spinner="dots"):
+        with console.status(S["phase_synthesis"], spinner="dots"):
             await asyncio.sleep(0.8)
-        with console.status(PHASE_LABELS["response_generation"], spinner="dots"):
+        with console.status(S["phase_responses"], spinner="dots"):
             await asyncio.sleep(1.0)
 
         history.append_round(
@@ -300,21 +294,21 @@ async def main():
         )
 
         console.print()
-        console.rule(f"[bold]第 {round_num} 轮分析完成", style="green")
+        console.rule(S["round_done"].format(round_num=round_num), style="green")
 
         render_summary(scenario["analyst"], scenario["logician"], scenario["tactician"])
         render_responses(scenario["copywriter"])
 
         console.print()
-        console.print(f"[dim]第 {round_num} 轮已保存至会话历史[/]")
+        console.print(S["round_saved"].format(round_num=round_num))
         console.rule("[dim]", style="dim")
 
         console.print()
-        again = Prompt.ask("[bold]继续分析下一条消息？[/]", choices=["y", "n"], default="n")
+        again = Prompt.ask(S["prompt_again"], choices=["y", "n"], default="n")
         if again != "y":
             break
 
-    console.print("[dim]会话结束，历史文件已清理。[/]")
+    console.print(S["session_end"])
 
 
 if __name__ == "__main__":

@@ -1,12 +1,12 @@
-"""战术师 — 战略情报探员
+"""Tactician — Strategic Intelligence Agent
 
-任务：融合心理分析 + 逻辑分析 → 生成作战计划
+Task: Fuse psychological + logical analysis into a battle plan
 """
 
 import json
 from openai import AsyncOpenAI
 
-SYSTEM_PROMPT = """\
+_BASE_PROMPT = """\
 你是「战术师」，一位精通辩论策略的大师。你将心理情报和逻辑分析\
 融合为一份可执行的辩论战略。
 
@@ -19,36 +19,41 @@ SYSTEM_PROMPT = """\
 
 生成一个 JSON 对象，包含以下字段：
 
-{
+{{
   "strategic_summary": "2-3 句概述推荐的整体策略。",
   "attack_vectors": [
-    {
+    {{
       "fallacy_exploited": "要利用的谬误名称。",
       "psychological_link": "这个谬误如何关联到对方的不安全感或情绪触发点。",
       "recommended_move": "建议执行的具体修辞或逻辑动作。",
       "expected_reaction": "对手可能如何回应。"
-    }
+    }}
   ],
-  "tone_guidance": {
+  "tone_guidance": {{
     "surgeon": "外科手术式回复的语调和策略建议。",
     "tank": "坦克碾压式回复的语调和策略建议。",
     "nuclear": "核弹打击式回复的语调和策略建议。"
-  },
+  }},
   "traps_to_avoid": ["列出 2-3 个对手可能使用的反击手段，你不应落入的陷阱。"]
-}
+}}
 
 规则：
 - 策略要有效，不要无谓地残忍。
 - 根据用户的目标（辩论 / 降级 / 焚烧）调整策略。
-- 所有内容必须用中文输出。
+- {lang_instruction}
 - 仅输出有效 JSON —— 不要 markdown 代码块，不要额外评论。
 """
 
 
 class TacticianAgent:
-    def __init__(self, client: AsyncOpenAI, model: str):
+    def __init__(self, client: AsyncOpenAI, model: str, output_lang: str = "zh"):
         self.client = client
         self.model = model
+        if output_lang == "en":
+            lang_instruction = "All output must be in English."
+        else:
+            lang_instruction = "所有内容必须用中文输出。"
+        self.system_prompt = _BASE_PROMPT.format(lang_instruction=lang_instruction)
 
     async def run(
         self,
@@ -72,7 +77,7 @@ class TacticianAgent:
             model=self.model,
             temperature=0.5,
             messages=[
-                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "system", "content": self.system_prompt},
                 {"role": "user", "content": "\n".join(user_parts)},
             ],
         )

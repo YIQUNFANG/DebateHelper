@@ -32,7 +32,7 @@ def test_engine_import():
 
 
 def test_cli_import():
-    from debate_engine.cli import parse_args, resolve_goal, GOAL_MAP
+    from debate_engine.cli import parse_args, resolve_goal
     assert resolve_goal("burn") == "Burn"
     assert resolve_goal("焚烧") == "Burn"
     assert resolve_goal("1") == "Debate"
