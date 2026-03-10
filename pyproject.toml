@@ -3,9 +3,9 @@ requires = ["setuptools>=68.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "debate-engine"
+name = "debate-helper"
 version = "1.0.0"
-description = "Multi-agent argument analysis and response generation CLI"
+description = "Multi-agent CLI that deconstructs toxic communication, identifies logical fallacies, and generates tactical responses"
 requires-python = ">=3.10"
 dependencies = [
     "openai>=1.0.0",
